@@ -30,11 +30,11 @@ public static void main(String[] args) {
   
   final Game game = new Game() {
     
-    private PlayerCar playerCar;
+    private PlayerCar2 playerCar;
 
     @Override
     public void init() {
-      playerCar = new PlayerCar();
+      playerCar = new PlayerCar2();
       entities.add(playerCar);
     }
     
@@ -60,19 +60,20 @@ public static void main(String[] args) {
 
     @Override
     public Image bgTileImage() {
-//      Image image = new BufferedImage(500, 500, BufferedImage.TYPE_4BYTE_ABGR);
-//      Graphics g = image.getGraphics();
-//      g.setColor(Color.pink);
-//      g.fillRect(0, 0, 500, 500);
-//      
-//      g.setColor(Color.red);
-//      g.fillRect(0, 0, 250, 250);
-//      g.fillRect(250, 250, 250, 250);
-//      g.dispose();
-      Image i = imageManager.get("test_track.png");
-      BufferedImage bigger = new BufferedImage(5000, 5000, BufferedImage.TYPE_INT_ARGB);
-      bigger.getGraphics().drawImage(i, 0, 0, 5000, 5000, null);
-      return bigger;
+      Image image = new BufferedImage(500, 500, BufferedImage.TYPE_4BYTE_ABGR);
+      Graphics g = image.getGraphics();
+      g.setColor(Color.pink);
+      g.fillRect(0, 0, 500, 500);
+      
+      g.setColor(Color.red);
+      g.fillRect(0, 0, 250, 250);
+      g.fillRect(250, 250, 250, 250);
+      g.dispose();
+      return image;
+//      Image i = imageManager.get("test_track.png");
+//      BufferedImage bigger = new BufferedImage(5000, 5000, BufferedImage.TYPE_INT_ARGB);
+//      bigger.getGraphics().drawImage(i, 0, 0, 5000, 5000, null);
+//      return bigger;
     }
     
   };
