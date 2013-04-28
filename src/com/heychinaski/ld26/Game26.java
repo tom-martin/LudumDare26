@@ -27,7 +27,7 @@ public class Game26 extends Game {
   private BackgroundTile sky2;
   private BackgroundTile back2;
   private BackgroundTile back3;
-  private List<BadDude> badDudes;
+  List<BadDude> badDudes;
   EntityTrackingCamera ourCamera;
   private BufferedImage goodBuffer;
   private BufferedImage badBuffer;
@@ -47,6 +47,9 @@ public class Game26 extends Game {
   private Events events;
   Dialog dialog;
   private Clip musicClip;
+  private BossDude bossDude = null;
+  
+  private Image powerUpImage;
   
   @Override
   public void init() {
@@ -54,6 +57,8 @@ public class Game26 extends Game {
   }
 
   public void init(int eventIndex, int fireFrequency) {
+    bossDude = null;
+    entities = new ArrayList<Entity>();
     player = new Ship(imageManager.get("ship2.png"),
                       imageManager.get("ship1.png"));
     
@@ -71,6 +76,7 @@ public class Game26 extends Game {
     dialog.font = font;
     
     heart = imageManager.get("heart.png");
+    powerUpImage = imageManager.get("powerup.png");
     
     events = new Events(this, eventIndex);
     
@@ -127,24 +133,8 @@ public class Game26 extends Game {
     }
     
     if(!pauseMotion) {
-      Entity tracking = player;
-      for(int i = 0; i < badDudes.size(); i++) {
-        BadDude sd = badDudes.get(i);
-        if(sd.x < player.x) {
-          tracking = sd;
-        }
-      }
-      
       ourCamera.toTrack = player;
       ourCamera.offsetX = player.currentOffset; 
-      
-//      if(squareDudes.size() < 5 &&
-//          System.currentTimeMillis() - lastSquareDudeAddition > nextSquareDudeAddition) {
-//        SquareDude newSd = new SquareDude(imageManager.get("squaredude.png"));
-//        newSd.nextX = player.nextX + 500;
-//        newSd.x = newSd.nextX;
-//        addSquareDude(newSd);
-//      }
       
       PlayerMissile removeThisTime = null;
       for(int i = 0; i < missiles.size(); i++) {
@@ -158,7 +148,7 @@ public class Game26 extends Game {
       float wipeX = player.x + 500;
       for(int i = 0; i < badDudes.size(); i++) {
         BadDude sd = badDudes.get(i);
-        wipeX = Math.min(wipeX, sd.x);
+        wipeX = Math.min(wipeX, sd.x - 32);
       }
       
       currentWipeX += Math.max(-500 * tick, Math.min(500 * tick, (wipeX - currentWipeX)));
@@ -191,7 +181,10 @@ public class Game26 extends Game {
                          "rounddude.png",
                          "powerup.png",
                          "powerupalt.png",
-                         "tridude.png"};
+                         "tridude.png",
+                         "bossdude.png",
+                         "bossdialog.png",
+                         "bossdialogdead.png"};
   }
 
   @Override
@@ -251,6 +244,29 @@ public class Game26 extends Game {
     for(int i = 0; i < player.life; i++) {
       g.drawImage(heart, 5 + (i * heart.getWidth(null)), 5, null);
     }
+    
+    if(player.fireFreq <= 250) {
+      g.drawImage(powerUpImage, 100, 5, null);
+    }
+    
+    if(player.fireFreq <= 200) {
+      g.drawImage(powerUpImage, 100 + (powerUpImage.getWidth(null)), 5, null);
+    }
+    
+    if(player.fireFreq <= 150) {
+      g.drawImage(powerUpImage, 100 + (powerUpImage.getWidth(null) * 2), 5, null);
+    }
+    
+    if(bossDude != null) {
+      g.setColor(Color.white);
+      g.fillRect(200, 5, 200, 12);
+      g.setColor(Color.black);
+      g.fillRect(201, 6, 199, 10);
+      g.setColor(Color.white);
+      g.fillRect(202, 7, bossDude.life - 3, 8);
+      g.setColor(Color.white);
+      g.fillRect(203, 8, bossDude.life - 4, 6);
+    }
   }
   
   public SquareDude addSquareDude() {
@@ -265,16 +281,16 @@ public class Game26 extends Game {
     return newSd;
   }
   
-  public PowerUp addPowerUp(int playerOffset) {
-    PowerUp powerUp = new PowerUp(imageManager.get("powerup.png"), imageManager.get("powerupalt.png"));
+  public PowerUp addPowerUp(int playerOffset, int newFreq) {
+    PowerUp powerUp = new PowerUp(imageManager.get("powerup.png"), imageManager.get("powerupalt.png"), newFreq);
     powerUp.nextX = player.nextX + playerOffset;
     powerUp.x = powerUp.nextX;
     entities.add(powerUp);
     return powerUp;
   }
   
-  public RoundDude addRoundDude(int playerOffset, float y, float spinSpeed, float circleSize) {
-    RoundDude newDude = new RoundDude(imageManager.get("rounddude.png"), player.nextX + playerOffset, y, spinSpeed, circleSize);
+  public RoundDude addRoundDude(int playerOffset, float y, float spinSpeed, float circleSize, Entity originEntity) {
+    RoundDude newDude = new RoundDude(imageManager.get("rounddude.png"), player.nextX + playerOffset, y, spinSpeed, circleSize, originEntity);
     addBadDude(newDude);
     return newDude;
   }
@@ -294,10 +310,22 @@ public class Game26 extends Game {
     return dude;
   }
   
-  public boolean removeBadDude(BadDude sd) {
-    entities.remove(sd);
-    sd.dead = true;
-    return badDudes.remove(sd);
+  public BossDude addBossDude() {
+    BossDude dude = new BossDude(imageManager.get("bossdude.png"), this);
+    dude.nextX = player.x + 300;
+    dude.x = dude.nextX;
+    entities.add(dude);
+    badDudes.add(dude);
+    
+    bossDude  = dude;
+    
+    return dude;
+  }
+  
+  public boolean removeBadDude(BadDude bd) {
+    entities.remove(bd);
+    bd.dead = true;
+    return badDudes.remove(bd);
   }
   
   public boolean addMissile(float x, float y) {

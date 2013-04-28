@@ -14,8 +14,11 @@ public class Ship extends Entity {
   public static float REGULAR_SPEED = 100;
   public static float FAST_SPEED = 200;
   public static float UPDOWN_SPEED = 300;
+  public static int DEATH_COOL_OFF_TIME = 2000;
   
-  public int life = 3;
+  public int life = 5;
+  
+  public boolean deathCoolOff = false;
   
   public long lastFire = -1;
   
@@ -25,6 +28,7 @@ public class Ship extends Entity {
   
   public float currentOffset = 160;
   public float targetOffset = 160;
+  private long deathCoolOffCompleteTime;
 
   public Ship(Image image1, Image image2) {
     super();
@@ -38,20 +42,27 @@ public class Ship extends Entity {
   @Override
   public void collided(Entity other, float tick, Game game, Float arg3,
       Float arg4, Float arg5) {
-    if(other instanceof BadDude) {
-      ((Game26)game).removeBadDude((BadDude) other);
+    if(other instanceof BadDude && !deathCoolOff) {
+      if(!(other instanceof BossDude)) ((Game26)game).removeBadDude((BadDude) other);
       ((Game26)game).addExplosion(other.x, other.y);
       life--;
+      deathCoolOff = true;
+      deathCoolOffCompleteTime = System.currentTimeMillis() + DEATH_COOL_OFF_TIME;
     }
     if(other instanceof PowerUp) {
-      ((Game26)game).removePowerUp((PowerUp) other);
-      ((PowerUp) other).collected = true;
-      ((Game26)game).playPowerUpSound();
+      PowerUp p = (PowerUp) other;
+      if(!p.collected) {
+        ((Game26)game).removePowerUp(p);
+        p.collected = true;
+        ((Game26)game).playPowerUpSound();
+        if(p.newFreq > 0) fireFreq = p.newFreq;
+      }
     }
   }
 
   @Override
   public void render(Graphics2D g, Game game) {
+    if(deathCoolOff && (System.currentTimeMillis() / 200) % 2 == 0) return;
     g.translate(x, y);
     Image i = ((Game26)game).alternateRender ? image2 : image1;
     g.drawImage(i, -16, -8, null);
@@ -60,6 +71,10 @@ public class Ship extends Entity {
 
   @Override
   public void update(float tick, Game game) {
+    if(System.currentTimeMillis() > deathCoolOffCompleteTime) {
+      deathCoolOff = false;
+    }
+    
     float speed = REGULAR_SPEED;
     if(game.input.isKeyDown(KeyEvent.VK_LEFT)) {
       if(Math.abs(currentOffset - targetOffset) > 1) {

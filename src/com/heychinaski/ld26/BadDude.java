@@ -37,7 +37,7 @@ public class BadDude extends Entity {
   public void render(Graphics2D g, Game game) {
     g.translate(x, y);
     Image i = image;
-    g.drawImage(i, -8, -8, null);
+    g.drawImage(i, (int)-(w/2), (int)-(h/2), null);
     g.translate(-x, -y);
   }
 

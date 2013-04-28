@@ -12,13 +12,15 @@ public class PowerUp extends Entity {
   private Image image;
   
   boolean collected = false;
+  int newFreq;
   
-  public PowerUp(Image image, Image altImage) {
+  public PowerUp(Image image, Image altImage, int newFreq) {
     super();
     this.image = image;
     this.altImage = altImage;
     this.w = image.getWidth(null);
     this.h = image.getHeight(null);
+    this.newFreq = newFreq;
   }
 
   private Image altImage;

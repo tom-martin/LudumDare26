@@ -8,7 +8,7 @@ import com.heychinaski.engie.Game;
 public class TriDude extends BadDude {
   
   private float forwardSpeed = -100;
-  private static final float UPDOWN_SPEED = 25;
+  private static final float UPDOWN_SPEED = 50;
   private Entity yTarget;
 
   public TriDude(Image image, Entity yTarget, float forwardSpeed) {
