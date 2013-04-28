@@ -1,6 +1,6 @@
 package com.heychinaski.ld26;
 
-import static java.lang.Math.floor;
+import static java.lang.Math.random;
 import static java.lang.Math.round;
 
 import java.awt.Color;
@@ -10,6 +10,9 @@ import java.awt.event.KeyEvent;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.List;
+
+import javax.sound.sampled.Clip;
+import javax.sound.sampled.FloatControl;
 
 import com.heychinaski.engie.Entity;
 import com.heychinaski.engie.Game;
@@ -24,10 +27,11 @@ public class Game26 extends Game {
   private BackgroundTile sky2;
   private BackgroundTile back2;
   private BackgroundTile back3;
-  private List<SquareDude> squareDudes;
-  private EntityTrackingCamera ourCamera;
+  private List<BadDude> badDudes;
+  EntityTrackingCamera ourCamera;
   private BufferedImage goodBuffer;
   private BufferedImage badBuffer;
+  private Image heart;
   
   Font font;
   
@@ -42,11 +46,18 @@ public class Game26 extends Game {
   boolean pauseMotion = false;
   private Events events;
   Dialog dialog;
-
+  private Clip musicClip;
+  
   @Override
   public void init() {
+    init(0, 500);
+  }
+
+  public void init(int eventIndex, int fireFrequency) {
     player = new Ship(imageManager.get("ship2.png"),
                       imageManager.get("ship1.png"));
+    
+    player.fireFreq = fireFrequency;
     
     dialog = new Dialog();
     dialog.visible = false;
@@ -59,11 +70,13 @@ public class Game26 extends Game {
     font = new Font(imageManager.get("font.png"), Color.black);
     dialog.font = font;
     
-    events = new Events(this);
+    heart = imageManager.get("heart.png");
+    
+    events = new Events(this, eventIndex);
     
     entities.add(player);
     missiles = new ArrayList<PlayerMissile>();
-    squareDudes = new ArrayList<SquareDude>();
+    badDudes = new ArrayList<BadDude>();
     
     sky1 = new BackgroundTile(imageManager.get("sky1.png"));
     sky2 = new BackgroundTile(imageManager.get("sky2.png"));
@@ -72,7 +85,7 @@ public class Game26 extends Game {
     
     ditherImage = imageManager.get("dither.png");
     
-    ourCamera = new EntityTrackingCamera(this, player, true, false, 160, 0);
+    ourCamera = new EntityTrackingCamera(this, player, true, false, 0, 0);
     ourCamera.zoom = 2.5f;
     
     entities.add(ourCamera);
@@ -81,14 +94,32 @@ public class Game26 extends Game {
     badBuffer = new BufferedImage(getWidth(), getHeight(), BufferedImage.TYPE_INT_ARGB);
     
     currentWipeX = getWidth();
+    
+    dialog.x = (int) (5);
+    dialog.y = (int) (256);
+    
+    if(musicClip == null) playMusic();
   }
   
   public void update(float tick) {
     events.update(this);
-    if(input.isKeyDown(KeyEvent.VK_ESCAPE)) System.exit(0);
+    if(player.life <= 0) {
+      events.gameOver(this);
+    }
     
-    if(input.isKeyDown(KeyEvent.VK_Z)) ourCamera.zoom += tick;
-    if(input.isKeyDown(KeyEvent.VK_X)) ourCamera.zoom -= tick;
+    if(input.isKeyDown(KeyEvent.VK_ESCAPE)) {
+      stop();
+      System.exit(0);
+    }
+    
+    if(input.isKeyDown(KeyEvent.VK_M)) {
+      if(musicClip != null && musicClip.isRunning()) {
+        musicClip.stop();
+      } else {
+        playMusic();
+      }
+      input.keyUp(KeyEvent.VK_M);
+    }
     
     if(input.isKeyDown(KeyEvent.VK_P)) {
       pauseMotion = !pauseMotion;
@@ -97,14 +128,15 @@ public class Game26 extends Game {
     
     if(!pauseMotion) {
       Entity tracking = player;
-      for(int i = 0; i < squareDudes.size(); i++) {
-        SquareDude sd = squareDudes.get(i);
+      for(int i = 0; i < badDudes.size(); i++) {
+        BadDude sd = badDudes.get(i);
         if(sd.x < player.x) {
           tracking = sd;
         }
       }
       
-      ourCamera.toTrack = tracking;
+      ourCamera.toTrack = player;
+      ourCamera.offsetX = player.currentOffset; 
       
 //      if(squareDudes.size() < 5 &&
 //          System.currentTimeMillis() - lastSquareDudeAddition > nextSquareDudeAddition) {
@@ -124,15 +156,13 @@ public class Game26 extends Game {
       if(removeThisTime != null) removeMissile(removeThisTime);
       
       float wipeX = player.x + 500;
-      for(int i = 0; i < squareDudes.size(); i++) {
-        SquareDude sd = squareDudes.get(i);
+      for(int i = 0; i < badDudes.size(); i++) {
+        BadDude sd = badDudes.get(i);
         wipeX = Math.min(wipeX, sd.x);
       }
       
       currentWipeX += Math.max(-500 * tick, Math.min(500 * tick, (wipeX - currentWipeX)));
       super.update(tick);
-      dialog.x = (int) ((ourCamera.x) - 180);
-      dialog.y = (int) ((ourCamera.y) + 118);
     }
   }
 
@@ -156,7 +186,12 @@ public class Game26 extends Game {
                          "explosion3alt.png",
                          "font.png",
                          "guy1.png",
-                         "guy2.png"};
+                         "guy2.png",
+                         "heart.png",
+                         "rounddude.png",
+                         "powerup.png",
+                         "powerupalt.png",
+                         "tridude.png"};
   }
 
   @Override
@@ -187,7 +222,6 @@ public class Game26 extends Game {
       entities.get(i).render(goodG, this);
     }
     
-    dialog.render(goodG);
     goodG.dispose();
     
     Graphics2D badG = (Graphics2D) badBuffer.getGraphics();
@@ -206,12 +240,17 @@ public class Game26 extends Game {
       entities.get(i).render(badG, this);
     }
     
-    dialog.render(badG);
     badG.dispose();
     
     g.drawImage(goodBuffer, 0, 0, null);
-    g.setClip(round(ourCamera.worldXToScreenX(currentWipeX)), 0, getWidth(), getHeight());
+    g.setClip(round(ourCamera.worldXToScreenX(currentWipeX)), 0, getWidth()* 100, getHeight());
     g.drawImage(badBuffer, 0, 0, null);
+    g.setClip(null);
+    g.scale(ourCamera.zoom, ourCamera.zoom);
+    dialog.render(g);
+    for(int i = 0; i < player.life; i++) {
+      g.drawImage(heart, 5 + (i * heart.getWidth(null)), 5, null);
+    }
   }
   
   public SquareDude addSquareDude() {
@@ -222,19 +261,43 @@ public class Game26 extends Game {
     SquareDude newSd = new SquareDude(imageManager.get("squaredude.png"));
     newSd.nextX = player.nextX + playerOffset;
     newSd.x = newSd.nextX;
-    addSquareDude(newSd);
+    addBadDude(newSd);
     return newSd;
   }
   
-  public void addSquareDude(SquareDude sd) {
-    entities.add(sd);
-    squareDudes.add(sd);
+  public PowerUp addPowerUp(int playerOffset) {
+    PowerUp powerUp = new PowerUp(imageManager.get("powerup.png"), imageManager.get("powerupalt.png"));
+    powerUp.nextX = player.nextX + playerOffset;
+    powerUp.x = powerUp.nextX;
+    entities.add(powerUp);
+    return powerUp;
   }
   
-  public boolean removeSquareDude(SquareDude sd) {
+  public RoundDude addRoundDude(int playerOffset, float y, float spinSpeed, float circleSize) {
+    RoundDude newDude = new RoundDude(imageManager.get("rounddude.png"), player.nextX + playerOffset, y, spinSpeed, circleSize);
+    addBadDude(newDude);
+    return newDude;
+  }
+  
+  public void addBadDude(BadDude sd) {
+    entities.add(sd);
+    badDudes.add(sd);
+  }
+  
+  public TriDude addTriDude(float xOffset, float forwardSpeed, Entity toTrack) {
+    Entity tt = toTrack == null ? player : toTrack;
+    TriDude dude = new TriDude(imageManager.get("tridude.png"), tt, forwardSpeed);
+    dude.nextX = player.x + xOffset;
+    dude.x = dude.nextX;
+    entities.add(dude);
+    badDudes.add(dude);
+    return dude;
+  }
+  
+  public boolean removeBadDude(BadDude sd) {
     entities.remove(sd);
     sd.dead = true;
-    return squareDudes.remove(sd);
+    return badDudes.remove(sd);
   }
   
   public boolean addMissile(float x, float y) {
@@ -260,10 +323,46 @@ public class Game26 extends Game {
     e.nextX = x;
     e.nextY = y;
     entities.add(e);
+    playExplosionSound();
   }
   
   public void removeExplosion(Explosion e) {
     entities.remove(e);
   }
 
+  public void removePowerUp(PowerUp p) {
+    entities.remove(p);
+  }
+  
+  public static int randomInt(int max) { return (int)(random() * max);}
+  
+  public synchronized void playShootSound() {
+    playSound("/shoot" + System.currentTimeMillis() % 3 + ".wav", false);
+  }
+  
+  public synchronized void playExplosionSound() {
+    playSound("/explosion" + System.currentTimeMillis() % 3 + ".wav", false);
+  }
+  
+  public synchronized void playPowerUpSound() {
+    playSound("/powerup.wav", false);
+  }
+  
+  public synchronized void playMusic() {
+    musicClip = playSound("/music.wav", true);
+    
+    FloatControl gainControl = 
+        (FloatControl) musicClip.getControl(FloatControl.Type.MASTER_GAIN);
+    gainControl.setValue(-5f);
+  }
+  
+  public void stop() {
+    try {
+      if(musicClip != null) {
+        musicClip.stop();
+      }
+    } catch(Exception e) {
+      // meh
+    }
+  }
 }

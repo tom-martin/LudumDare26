@@ -10,14 +10,21 @@ import com.heychinaski.engie.Entity;
 import com.heychinaski.engie.Game;
 
 public class Ship extends Entity {
-  public static float SLOW_SPEED = 50;
+  public static float SLOW_SPEED = 0;
   public static float REGULAR_SPEED = 100;
-  public static float FAST_SPEED = 150;
+  public static float FAST_SPEED = 200;
   public static float UPDOWN_SPEED = 300;
+  
+  public int life = 3;
   
   public long lastFire = -1;
   
   public Image image1, image2;
+  
+  public int fireFreq = 500;
+  
+  public float currentOffset = 160;
+  public float targetOffset = 160;
 
   public Ship(Image image1, Image image2) {
     super();
@@ -31,9 +38,15 @@ public class Ship extends Entity {
   @Override
   public void collided(Entity other, float tick, Game game, Float arg3,
       Float arg4, Float arg5) {
-    if(other instanceof SquareDude) {
-      ((Game26)game).removeSquareDude((SquareDude) other);
+    if(other instanceof BadDude) {
+      ((Game26)game).removeBadDude((BadDude) other);
       ((Game26)game).addExplosion(other.x, other.y);
+      life--;
+    }
+    if(other instanceof PowerUp) {
+      ((Game26)game).removePowerUp((PowerUp) other);
+      ((PowerUp) other).collected = true;
+      ((Game26)game).playPowerUpSound();
     }
   }
 
@@ -41,15 +54,29 @@ public class Ship extends Entity {
   public void render(Graphics2D g, Game game) {
     g.translate(x, y);
     Image i = ((Game26)game).alternateRender ? image2 : image1;
-    g.drawImage(i, -16, 8, null);
+    g.drawImage(i, -16, -8, null);
     g.translate(-x, -y);
   }
 
   @Override
   public void update(float tick, Game game) {
     float speed = REGULAR_SPEED;
-    if(game.input.isKeyDown(KeyEvent.VK_LEFT)) speed = SLOW_SPEED;
-    if(game.input.isKeyDown(KeyEvent.VK_RIGHT)) speed = FAST_SPEED;
+    if(game.input.isKeyDown(KeyEvent.VK_LEFT)) {
+      if(Math.abs(currentOffset - targetOffset) > 1) {
+        speed = SLOW_SPEED;
+      } else {
+        speed = REGULAR_SPEED;
+      }
+      targetOffset = 170;
+    }
+    if(game.input.isKeyDown(KeyEvent.VK_RIGHT)) {
+      if(Math.abs(currentOffset - targetOffset) > 1) {
+        speed = FAST_SPEED;
+      } else {
+        speed = REGULAR_SPEED;
+      }
+      targetOffset = 0;
+    }
     nextX += (tick * speed);
     if(game.input.isKeyDown(KeyEvent.VK_UP)) nextY -= (tick * UPDOWN_SPEED);
     if(game.input.isKeyDown(KeyEvent.VK_DOWN)) nextY += (tick * UPDOWN_SPEED);
@@ -58,10 +85,15 @@ public class Ship extends Entity {
     nextY = Math.max(nextY, -144);
     
     if(game.input.isKeyDown(KeyEvent.VK_SPACE) &&
-        System.currentTimeMillis() - lastFire > 500) {
-      ((Game26)game).addMissile(nextX, nextY + 20);
+        !((Game26)game).dialog.visible &&
+        System.currentTimeMillis() - lastFire > fireFreq) {
+      ((Game26)game).addMissile(nextX, nextY + 8);
+      ((Game26)game).playShootSound();
       lastFire = System.currentTimeMillis();
     }
+    
+    float offsetSpeed = Math.abs(REGULAR_SPEED - speed);
+    currentOffset += Math.max(-offsetSpeed * tick, Math.min(offsetSpeed * tick, (targetOffset - currentOffset)));
   }
 
 }
