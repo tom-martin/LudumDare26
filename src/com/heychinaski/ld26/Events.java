@@ -23,19 +23,37 @@ public class Events {
   
   public Events(Game26 game, int eventIndex) {
     currentEventIndex = eventIndex;
-    gameOverEvent = new DialogEvent(0, "YOU DIED!", "", "<PRESS N TO CONTINUE>", game.imageManager.get("guy1.png"), true) {
+     gameOverEvent = new DialogEvent(0, "YOU DIED!", "", "<PRESS N TO CONTINUE>", game.imageManager.get("guy1.png"), true) {
       public void end(Game26 game) {
         super.end(game);
         game.init(currentEventIndex, game.player.fireFreq);
         terminated = true;
       };
     };
-   // events.add(new DialogEvent(2000, "YOU REMEMBER HOW TO FLY", "THESE THINGS?", "<PUSH N TO CONTINUE>", game.imageManager.get("guy1.png"), false));
+    events.add(new DialogEvent(0, "HELLO PILOT. COMMAND HERE.", "", "<PUSH N TO START>", game.imageManager.get("guy1.png"), false) {
+      @Override
+      public void start(Game26 game) {
+        super.start(game);
+        game.drawTitle = true;
+      }
+      
+      @Override
+      public boolean isComplete(Game26 game) {
+        return ((System.currentTimeMillis() - startTime) > 500 && game.input.isKeyDown(KeyEvent.VK_N));
+      }
+    });
+    events.add(new DialogEvent(2000, "YOU REMEMBER HOW TO FLY", "THESE THINGS?", "<PUSH N TO CONTINUE>", game.imageManager.get("guy1.png"), false));
     events.add(new DialogEvent(0, "OF COURSE BUT WHY DON'T YOU", "REFRESH MY MEMORY?", "", game.imageManager.get("guy2.png"), false));
     events.add(new DialogEvent(0, "USE THE UP AND DOWN ARROW", "KEYS TO CONTROL YOUR SHIP.", "", game.imageManager.get("guy1.png"), false));
     events.add(new DialogEvent(2000, "LEFT AND RIGHT WILL CONTROL", "YOUR SPEED.", "", game.imageManager.get("guy1.png"), false));
     events.add(new DialogEvent(2000, "TAKE IT EASY OUT THERE PILOT.", "", "", game.imageManager.get("guy1.png"), false));
-    events.add(new DialogEvent(0, "WILL DO COMMAND. SHOULD BE A", "ROUTINE MISSION...", "", game.imageManager.get("guy2.png"), false));
+    events.add(new DialogEvent(0, "WILL DO COMMAND. SHOULD BE A", "ROUTINE MISSION...", "", game.imageManager.get("guy2.png"), false) {
+      @Override
+      public void end(Game26 game) {
+        super.end(game);
+        game.drawTitle = false;
+      }
+    });
     events.add(new Event(3000) {
       private BadDude dude;
 

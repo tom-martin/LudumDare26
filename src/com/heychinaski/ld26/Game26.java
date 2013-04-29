@@ -51,6 +51,9 @@ public class Game26 extends Game {
   
   private Image powerUpImage;
   
+  private Image titleImage;
+  boolean drawTitle = false;
+  
   @Override
   public void init() {
     init(0, 500);
@@ -70,6 +73,9 @@ public class Game26 extends Game {
     dialog.text2 = "";
     dialog.text3 = "";
     dialog.image = imageManager.get("guy1.png");
+    
+    drawTitle = false;
+    titleImage = imageManager.get("title.png");
     
     
     font = new Font(imageManager.get("font.png"), Color.black);
@@ -184,7 +190,8 @@ public class Game26 extends Game {
                          "tridude.png",
                          "bossdude.png",
                          "bossdialog.png",
-                         "bossdialogdead.png"};
+                         "bossdialogdead.png",
+                         "title.png"};
   }
 
   @Override
@@ -241,31 +248,36 @@ public class Game26 extends Game {
     g.setClip(null);
     g.scale(ourCamera.zoom, ourCamera.zoom);
     dialog.render(g);
-    for(int i = 0; i < player.life; i++) {
-      g.drawImage(heart, 5 + (i * heart.getWidth(null)), 5, null);
-    }
     
-    if(player.fireFreq <= 250) {
-      g.drawImage(powerUpImage, 100, 5, null);
-    }
-    
-    if(player.fireFreq <= 200) {
-      g.drawImage(powerUpImage, 100 + (powerUpImage.getWidth(null)), 5, null);
-    }
-    
-    if(player.fireFreq <= 150) {
-      g.drawImage(powerUpImage, 100 + (powerUpImage.getWidth(null) * 2), 5, null);
-    }
-    
-    if(bossDude != null) {
-      g.setColor(Color.white);
-      g.fillRect(200, 5, 200, 12);
-      g.setColor(Color.black);
-      g.fillRect(201, 6, 199, 10);
-      g.setColor(Color.white);
-      g.fillRect(202, 7, bossDude.life - 3, 8);
-      g.setColor(Color.white);
-      g.fillRect(203, 8, bossDude.life - 4, 6);
+    if(!drawTitle) {
+      for(int i = 0; i < player.life; i++) {
+        g.drawImage(heart, 5 + (i * heart.getWidth(null)), 5, null);
+      }
+      
+      if(player.fireFreq <= 250) {
+        g.drawImage(powerUpImage, 100, 5, null);
+      }
+      
+      if(player.fireFreq <= 200) {
+        g.drawImage(powerUpImage, 100 + (powerUpImage.getWidth(null)), 5, null);
+      }
+      
+      if(player.fireFreq <= 150) {
+        g.drawImage(powerUpImage, 100 + (powerUpImage.getWidth(null) * 2), 5, null);
+      }
+      
+      if(bossDude != null) {
+        g.setColor(Color.white);
+        g.fillRect(200, 5, 200, 12);
+        g.setColor(Color.black);
+        g.fillRect(201, 6, 199, 10);
+        g.setColor(Color.white);
+        g.fillRect(202, 7, bossDude.life - 3, 8);
+        g.setColor(Color.white);
+        g.fillRect(203, 8, bossDude.life - 4, 6);
+      }
+    } else {
+      g.drawImage(titleImage, 5, 5, null);
     }
   }
   
