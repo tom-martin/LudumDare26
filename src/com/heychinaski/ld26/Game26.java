@@ -22,6 +22,7 @@ import com.heychinaski.engie.render.BackgroundTile;
 import com.heychinaski.engie.render.Font;
 
 public class Game26 extends Game {
+  private static final long serialVersionUID = 1L;
   Ship player;
   private BackgroundTile sky1;
   private BackgroundTile sky2;

@@ -16,7 +16,7 @@ public class Main {
    * @param args
    */
   public static void main(String[] args) {
-    JFrame mainWindow = new JFrame("Test game");
+    JFrame mainWindow = new JFrame("Pilot & Command");
     JPanel panel = (JPanel) mainWindow.getContentPane();
     
     panel.setPreferredSize(new Dimension(1024, 768));
